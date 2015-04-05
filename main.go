@@ -1,51 +1,75 @@
 package main
 
 import (
-    "fmt"
-    "encoding/json"
-    "io/ioutil"
-    "log"
-    "net/http"
+	"encoding/json"
+	"fmt"
+	"github.com/codegangsta/cli"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
 )
 
 func main() {
-    var err error
+	app := cli.NewApp()
+	app.Name = "gommbanks"
+	app.Usage = "Get latest exchange rates from different banks in Myanmar."
+	app.Version = "0.0.1"
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name:  "Ye Myat Kaung (Maverick)",
+			Email: "mavjs01@gmail.com"},
+	}
+	app.Commands = []cli.Command{
+		{
+			Name:    "bank",
+			Aliases: []string{"b"},
+			Usage:   "bank to get exchange rate from. (currently supported CBM)",
+			Action: func(c *cli.Context) {
+				switch c.Args().First() {
+				case "cbm", "CBM":
+					fmt.Println(cbm())
+				default:
+					fmt.Println(cbm())
+				}
+			},
+		},
+	}
 
-    // request http api
-    res, err := http.Get("http://forex.cbm.gov.mm/api/latest")
-    if err != nil {
-        log.Fatal(err)
-    }
+	app.Run(os.Args)
+}
 
-    // read body
-    body, err := ioutil.ReadAll(res.Body)
-    res.Body.Close()
-    if err != nil {
-        log.Fatal(err)
-    }
+func cbm() string {
+	var err error
 
-    // parse json
-    type currency struct {
-        USD string
-        EUR string
-    }
+	// request http api
+	res, err := http.Get("http://forex.cbm.gov.mm/api/latest")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    type jsonUser struct {
-    //    Info string
-    //    Description string
-    //    Timestamp string
-        Rates currency
-    }
-    user := jsonUser{}
+	// read body
+	body, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    err = json.Unmarshal(body, &user)
-    if err != nil {
-        log.Fatal(err)
-    }
+	// parse json
+	type currency struct {
+		USD string
+		EUR string
+	}
 
-    // fmt.Println(user.Info)
-    // fmt.Println(user.Description)
-    // fmt.Println(user.Timestamp)
-    fmt.Println("USD Rate: ", user.Rates.USD)
-    fmt.Println("EUR Rate: ", user.Rates.EUR)
+	type jsonUser struct {
+		Rates currency
+	}
+	user := jsonUser{}
+
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return fmt.Sprintf("USD: %s\nEUR: %s", user.Rates.USD, user.Rates.EUR)
 }
